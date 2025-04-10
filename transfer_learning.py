@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+import torchvision
+import numpy as np
+import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
@@ -53,6 +56,20 @@ if __name__ == '__main__':
     print('train_dataset: ', len(train_dataset))
     print('val_dataset: ', len(val_dataset))
 
+    # 라벨링
+    labels_map = {
+        0: 'Avulsion fracture',
+        1: 'Comminuted fracture',
+        2: 'Fracture Dislocation',
+        3: 'Greenstick fracture',
+        4: 'Hairline Fracture',
+        5: 'Impacted fracture',
+        6: 'Longitudinal fracture',
+        7: 'Oblique fracture',
+        8: 'Pathological fracture',
+        9: 'Spiral Fracture'
+    }
+
     # DataLoader 정의
     batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -64,20 +81,19 @@ if __name__ == '__main__':
     print("Class names:", class_names)
     print("Number of classes:", num_classes)
 
-    # 2. 사전 학습된 ResNet 모델 로드 및 수정
+    #  사전 학습된 ResNet 모델 로드 및 수정
     model_ft = models.resnet18(pretrained=True)
     num_ftrs = model_ft.fc.in_features
     model_ft.fc = nn.Linear(num_ftrs, num_classes)
     model_ft = model_ft.to(device)
 
-    # 3. 손실 함수 및 Optimizer 설정
+    #  손실 함수 및 Optimizer 설정
     criterion = nn.CrossEntropyLoss()
     optimizer_ft = optim.Adam(model_ft.parameters(), lr=0.001)
-
     scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
 
-    # 4. 모델 학습 함수 정의
+    #  모델 학습 함수 정의
     def train_model(model, criterion, optimizer, scheduler, num_epochs=10):
         train_losses = []
         val_losses = []
@@ -141,14 +157,14 @@ if __name__ == '__main__':
 
         return model, train_losses, val_losses, train_accuracies, val_accuracies
 
-    '''
-    # 5. 모델 학습 실행
+
+    #  모델 학습 실행
     num_epochs = 100
     trained_model, train_losses, val_losses, train_accuracies, val_accuracies = train_model(model_ft, criterion,
                                                                                             optimizer_ft, scheduler,
                                                                                             num_epochs)
     
-    # 6. 학습 결과 시각화
+    #  학습 결과 시각화
     epochs = range(1, num_epochs + 1)
 
     plt.figure(figsize=(12, 5))
@@ -170,15 +186,15 @@ if __name__ == '__main__':
 
     plt.show()
     
-    #8. 모델 저장 (선택 사항)
+    # 모델 저장
     torch.save(trained_model.state_dict(), 'resnet18_finetuned.pth')
-    '''
+
     # 모델 로드
     PATH = '.\\resnet18_finetuned.pth'
     net = model_ft
     net.load_state_dict(torch.load(PATH))
 
-    # 7. 모델 평가 (선택 사항)
+    # 모델 평가
     def evaluate_model(model, dataloader):
         model.eval()
         total_correct = 0
@@ -194,6 +210,33 @@ if __name__ == '__main__':
         accuracy = total_correct / total_samples
         print(f"Evaluation Accuracy: {accuracy:.4f}")
 
+    # 모델 테스트
+    def imshow(image):
+        image = image.cpu().clone().detach()
+        image = image * torch.tensor(std).view(-1, 1, 1) + torch.tensor(mean).view(-1, 1, 1) # 정규화 되돌리기
+        image = image.numpy()
+        plt.imshow(np.transpose(image, (1, 2, 0)))
+        plt.show()
 
-    evaluate_model(net, val_loader)
+    dataiter = iter(val_loader)
+    images, label = dataiter.__next__()
+    images = images.to(device)  # 입력 데이터 GPU 이동
+    imshow(torchvision.utils.make_grid((images[:6].cpu())))
 
+    outputs = net(images)
+    _, predicted = torch.max(outputs, 1)
+
+    # 6개 이미지와 예측 결과 표시
+    figure = plt.figure(figsize=(16, 8))
+    for i in range(6):
+        ax = figure.add_subplot(2, 3, i + 1)
+        image = images[i].cpu().clone().detach()
+        image = image * torch.tensor(std).view(-1, 1, 1) + torch.tensor(mean).view(-1, 1, 1)  # 정규화 되돌리기
+        true_label = labels_map[label[i].item()]
+        pred_label = labels_map[predicted[i].item()]
+        ax.imshow(image.permute(1, 2, 0).numpy())
+        ax.set_title(f'True: {true_label}\nPredicted: {pred_label}')
+        ax.axis('off')
+    plt.show()
+
+    evaluate_model(net,val_loader)
