@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
 
     #  모델 학습 함수 정의
-    def train_model(model, criterion, optimizer, scheduler, num_epochs=10):
+    def train_model(model, criterion, optimizer, scheduler, num_epochs):
         train_losses = []
         val_losses = []
         train_accuracies = []
@@ -157,13 +157,13 @@ if __name__ == '__main__':
 
         return model, train_losses, val_losses, train_accuracies, val_accuracies
 
-
+    """#평가하려면 여기서부터 주석
     #  모델 학습 실행
     num_epochs = 100
     trained_model, train_losses, val_losses, train_accuracies, val_accuracies = train_model(model_ft, criterion,
                                                                                             optimizer_ft, scheduler,
                                                                                             num_epochs)
-    
+
     #  학습 결과 시각화
     epochs = range(1, num_epochs + 1)
 
@@ -187,10 +187,13 @@ if __name__ == '__main__':
     plt.show()
     
     # 모델 저장
-    torch.save(trained_model.state_dict(), 'resnet18_finetuned.pth')
+    torch.save(trained_model.state_dict(), '모델별 테스트 결과/resnet18_finetuned/resnet18_finetuned.pth')
+    #평가하려면 여기까지 주석"""
 
     # 모델 로드
-    PATH = '.\\resnet18_finetuned.pth'
+    #Path 변수에 각 모델별 파라미터 경로 넣어서 결과 확인할 수 있음
+    PATH = '모델별 테스트 결과/resnet18_finetuned/resnet18_finetuned.pth'
+
     net = model_ft
     net.load_state_dict(torch.load(PATH))
 
